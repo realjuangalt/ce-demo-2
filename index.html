@@ -51,34 +51,69 @@
       padding: 20px;
       background: #1a1a1a;
       color: #f7931a;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
     }
     #container {
       display: flex;
-      justify-content: space-between;
+      flex-direction: column;
+      flex: 1;
+      max-width: 100%;
+      height: 100%;
+    }
+    #input-section {
+      display: flex;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    #github-link {
+      flex: 1;
+      height: 40px;
+      box-sizing: border-box;
+      padding: 8px;
+      background: #1f1f1f;
+      border: 1px solid #f7931a;
+      color: #f7931a;
+      font-family: 'Courier New', monospace;
+      margin-right: 10px;
+    }
+    #button-container {
+      display: flex;
+      gap: 10px;
+    }
+    #main-section {
+      display: flex;
+      flex: 1;
       gap: 20px;
-      max-width: 1200px;
-      margin: 0 auto;
+      overflow: hidden;
     }
     #visual-section {
-      flex: 2;
+      flex: 3;
       background: #2d2d2d;
       padding: 20px;
+      padding-bottom: 40px; /* Added spacing at the bottom */
       border-radius: 5px;
       box-shadow: 0 0 15px rgba(247, 147, 26, 0.2);
       display: flex;
       flex-direction: column;
-      gap: 10px;
-      height: 500px;
+      overflow: hidden;
     }
     #chat-section {
       flex: 1;
       background: #2d2d2d;
       padding: 20px;
+      padding-bottom: 40px; /* Added spacing at the bottom */
       border-radius: 5px;
       box-shadow: 0 0 15px rgba(247, 147, 26, 0.2);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      max-width: 400px;
     }
     #chat-messages {
-      height: 300px;
+      flex: 1;
       overflow-y: auto;
       border: 1px solid #f7931a;
       padding: 10px;
@@ -86,12 +121,16 @@
       background: #1f1f1f;
       color: #f7931a;
     }
-    input[type="text"] {
+    #chat-input-section {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    #chat-input {
+      flex: 1;
       height: 40px;
-      width: 100%;
       box-sizing: border-box;
       padding: 8px;
-      margin-bottom: 10px;
       background: #1f1f1f;
       border: 1px solid #f7931a;
       color: #f7931a;
@@ -100,7 +139,6 @@
     button {
       width: 100px;
       height: 40px;
-      margin: 0 5px;
       padding: 8px;
       background: #f7931a;
       color: #1a1a1a;
@@ -111,9 +149,6 @@
     }
     button:hover {
       background: #e07b00;
-    }
-    #button-container {
-      margin-bottom: 10px;
     }
     #file-tree {
       flex: 1;
@@ -127,8 +162,8 @@
     #file-tree svg {
       width: 100%;
       height: 100%;
-      max-width: 350px;
-      max-height: 350px;
+      max-width: 600px;
+      max-height: 600px;
     }
     #code-view {
       max-height: 100px;
@@ -175,23 +210,26 @@
 </head>
 <body>
   <div id="container">
-    <div id="visual-section">
-      <h2>GitHub Explorer</h2>
+    <div id="input-section">
       <input type="text" id="github-link" placeholder="Paste GitHub file link...">
       <div id="button-container">
         <button onclick="loadRepo()">Load</button>
         <button onclick="goBack()" disabled id="back-btn">Back</button>
       </div>
-      <div id="file-tree"></div>
-      <div id="code-view"></div>
     </div>
-    <div id="chat-section">
-      <h2>Chat</h2>
-      <div id="chat-messages"></div>
-      <input type="text" id="chat-input" placeholder="Ask about the repo...">
-      <div>
-        <button onclick="sendMessage()">Send</button>
-        <button id="donate-btn" onclick="donate()">Donate</button>
+    <div id="main-section">
+      <div id="visual-section">
+        <div id="file-tree"></div>
+        <div id="code-view"></div>
+      </div>
+      <div id="chat-section">
+        <h2>Chat</h2>
+        <div id="chat-messages"></div>
+        <div id="chat-input-section">
+          <input type="text" id="chat-input" placeholder="Ask about the repo...">
+          <button onclick="sendMessage()">Send</button>
+          <button id="donate-btn" onclick="donate()">Donate</button>
+        </div>
       </div>
     </div>
   </div>
@@ -230,7 +268,6 @@
       tree.innerHTML = `<div id="loading-message">Loading repository...</div>`;
       
       try {
-        // Cancel any ongoing scrape
         await fetch('http://localhost:8000/cancel-scrape', {
           method: 'POST',
           headers: {
@@ -309,8 +346,8 @@
 
     function renderSunburst(data) {
       console.log("Rendering sunburst chart with data:", data);
-      const width = 350;
-      const height = 350;
+      const width = 600;
+      const height = 600;
       const radius = Math.min(width, height) / 2;
 
       d3.select("#file-tree").selectAll("*").remove();
