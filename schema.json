@@ -1,0 +1,30 @@
+{
+  "type": "object",
+  "properties": {
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "type": { "type": "string", "enum": ["file", "directory"] },
+          "quality": { "type": "number", "minimum": 0, "maximum": 100 },
+          "children": {
+            "type": "array",
+            "items": { "$ref": "#" }
+          },
+          "content": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        },
+        "required": ["name", "type", "quality"]
+      }
+    },
+    "path": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  },
+  "required": ["files", "path"]
+}

@@ -1,0 +1,466 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bitcoin GitHub Explorer Chatbot</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    body {
+      font-family: 'Courier New', monospace;
+      margin: 0;
+      padding: 20px;
+      background: #1a1a1a;
+      color: #f7931a;
+    }
+    #container {
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    #visual-section {
+      flex: 2;
+      background: #2d2d2d;
+      padding: 20px;
+      border-radius: 5px;
+      box-shadow: 0 0 15px rgba(247, 147, 26, 0.2);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      height: 500px;
+    }
+    #chat-section {
+      flex: 1;
+      background: #2d2d2d;
+      padding: 20px;
+      border-radius: 5px;
+      box-shadow: 0 0 15px rgba(247, 147, 26, 0.2);
+    }
+    #chat-messages {
+      height: 300px;
+      overflow-y: auto;
+      border: 1px solid #f7931a;
+      padding: 10px;
+      margin-bottom: 10px;
+      background: #1f1f1f;
+      color: #f7931a;
+    }
+    input[type="text"] {
+      height: 40px;
+      width: 100%;
+      box-sizing: border-box;
+      padding: 8px;
+      margin-bottom: 10px;
+      background: #1f1f1f;
+      border: 1px solid #f7931a;
+      color: #f7931a;
+      font-family: 'Courier New', monospace;
+    }
+    button {
+      width: 100px;
+      height: 40px;
+      margin: 0 5px;
+      padding: 8px;
+      background: #f7931a;
+      color: #1a1a1a;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-family: 'Courier New', monospace;
+    }
+    button:hover {
+      background: #e07b00;
+    }
+    #button-container {
+      margin-bottom: 10px;
+    }
+    #file-tree {
+      flex: 1;
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: #1f1f1f;
+      overflow: hidden;
+    }
+    #file-tree svg {
+      width: 100%;
+      height: 100%;
+      max-width: 350px;
+      max-height: 350px;
+    }
+    #code-view {
+      max-height: 100px;
+      overflow-y: auto;
+      background: #1f1f1f;
+      padding: 10px;
+      border: 1px solid #f7931a;
+      color: #f7931a;
+    }
+    #code-view .line {
+      cursor: pointer;
+    }
+    #code-view .line:hover {
+      background: #f7931a;
+      color: #1a1a1a;
+    }
+    #error-message {
+      color: #ff4d4d;
+      text-align: center;
+      padding: 10px;
+    }
+    #loading-message {
+      color: #f7931a;
+      text-align: center;
+      padding: 10px;
+    }
+    #donate-btn {
+      background: #ff9900;
+    }
+    #donate-btn:hover {
+      background: #e68a00;
+    }
+    h2 {
+      color: #f7931a;
+      text-shadow: 0 0 5px rgba(247, 147, 26, 0.5);
+      margin: 0 0 10px 0;
+    }
+    text {
+      font-family: 'Courier New', monospace;
+      fill: #ffffff;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <div id="visual-section">
+      <h2>GitHub Explorer</h2>
+      <input type="text" id="github-link" placeholder="Paste GitHub file link...">
+      <div id="button-container">
+        <button onclick="loadRepo()">Load</button>
+        <button onclick="goBack()" disabled id="back-btn">Back</button>
+      </div>
+      <div id="file-tree"></div>
+      <div id="code-view"></div>
+    </div>
+    <div id="chat-section">
+      <h2>Chat</h2>
+      <div id="chat-messages"></div>
+      <input type="text" id="chat-input" placeholder="Ask about the repo...">
+      <div>
+        <button onclick="sendMessage()">Send</button>
+        <button id="donate-btn" onclick="donate()">Donate</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentPath = [];
+    let mode = 'tree';
+    let repoData = null;
+
+    // Add Enter key support for chat input
+    document.getElementById('chat-input').addEventListener('keypress', function(event) {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        sendMessage();
+      }
+    });
+
+    async function updatePathOnServer() {
+      try {
+        await fetch('http://localhost:8000/update-path', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+          },
+          body: `path=${encodeURIComponent(JSON.stringify(currentPath))}`
+        });
+        console.log("Path updated on server:", currentPath);
+      } catch (error) {
+        console.error("Error updating path on server:", error);
+      }
+    }
+
+    async function fetchRepoData(link) {
+      console.log("Fetching repo data from server...");
+      const tree = document.getElementById('file-tree');
+      tree.innerHTML = `<div id="loading-message">Loading repository...</div>`;
+      
+      try {
+        // Cancel any ongoing scrape
+        await fetch('http://localhost:8000/cancel-scrape', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+          }
+        });
+
+        const response = await fetch('http://localhost:8000/scrape-repo', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+          },
+          body: `repo_url=${encodeURIComponent(link)}`
+        });
+        const data = await response.json();
+        console.log("Repo data received:", data);
+        if (data.error) throw new Error(data.error);
+        if (!data.files || data.files.length === 0) throw new Error("No files found in repository");
+        return data;
+      } catch (error) {
+        console.error("Error fetching repo data:", error);
+        tree.innerHTML = `<div id="error-message">Error: ${error.message}</div>`;
+        return null;
+      }
+    }
+
+    function getColorForQuality(quality) {
+      if (quality < 50) return "#ff4d4d";
+      if (quality < 80) return "#ffaa33";
+      return "#f7931a";
+    }
+
+    function findCurrentLevel(data, path) {
+      console.log("Finding current level for path:", path);
+      let current = data.files;
+      for (let i = 1; i < path.length; i++) {
+        const name = path[i];
+        const item = current.find(f => f.name === name);
+        if (item && item.type === "directory") {
+          current = item.children;
+        } else {
+          return item;
+        }
+      }
+      return { files: current };
+    }
+
+    function prepareSunburstData(data, path) {
+      console.log("Preparing sunburst data...");
+      const currentLevel = findCurrentLevel(data, path);
+      const sunburstData = {
+        name: "root",
+        children: currentLevel.files.map(item => {
+          const node = {
+            name: item.name,
+            size: 1,
+            quality: item.quality || 1,
+            type: item.type,
+            content: item.content || []
+          };
+          if (item.children) {
+            node.children = item.children.map(child => ({
+              name: child.name,
+              size: 1,
+              quality: child.quality || 1,
+              type: child.type,
+              content: child.content || []
+            }));
+          }
+          return node;
+        })
+      };
+      console.log("Prepared sunburst data:", JSON.stringify(sunburstData, null, 2));
+      return sunburstData;
+    }
+
+    function renderSunburst(data) {
+      console.log("Rendering sunburst chart with data:", data);
+      const width = 350;
+      const height = 350;
+      const radius = Math.min(width, height) / 2;
+
+      d3.select("#file-tree").selectAll("*").remove();
+
+      const svg = d3.select("#file-tree")
+        .append("svg")
+        .attr("width", width)
+        .attr("height", height)
+        .append("g")
+        .attr("transform", `translate(${width / 2},${height / 2})`);
+
+      const partition = d3.partition()
+        .size([2 * Math.PI, radius]);
+
+      const root = d3.hierarchy(data)
+        .sum(d => d.size);
+
+      partition(root);
+
+      const arc = d3.arc()
+        .startAngle(d => d.x0)
+        .endAngle(d => d.x1)
+        .innerRadius(d => d.y0)
+        .outerRadius(d => d.y1);
+
+      const paths = svg.selectAll("path")
+        .data(root.descendants().slice(1))
+        .enter()
+        .append("path")
+        .attr("d", arc)
+        .attr("fill", d => getColorForQuality(d.data.quality))
+        .attr("stroke", "#ffffff")
+        .attr("stroke-width", 1)
+        .style("cursor", "pointer")
+        .on("click", (event, d) => {
+          console.log("Clicked segment:", d.data.name);
+          if (d.data.type === "directory" || d.data.type === "file") {
+            explore(d.data.name);
+          }
+        });
+
+      console.log("Number of paths drawn:", paths.size());
+
+      svg.selectAll("text")
+        .data(root.descendants().slice(1))
+        .enter()
+        .append("text")
+        .attr("transform", d => {
+          const midAngle = (d.x0 + d.x1) / 2;
+          const r = (d.y0 + d.y1) / 2;
+          return `translate(${Math.sin(midAngle) * r},${-Math.cos(midAngle) * r}) rotate(${midAngle * 180 / Math.PI - 90})`;
+        })
+        .attr("dy", "0.35em")
+        .attr("text-anchor", "middle")
+        .text(d => d.data.name)
+        .filter(d => (d.x1 - d.x0) * (d.y1 - d.y0) < 0.05)
+        .remove();
+    }
+
+    async function sendMessage() {
+      const input = document.getElementById('chat-input');
+      const messages = document.getElementById('chat-messages');
+      const message = input.value.trim();
+      if (!message) return;
+
+      messages.innerHTML += `<p><b>You:</b> ${message}</p>`;
+      messages.scrollTop = messages.scrollHeight;
+
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+        const response = await fetch('http://localhost:8000/chat', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+          },
+          body: `message=${encodeURIComponent(message)}`,
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+        const data = await response.json();
+        messages.innerHTML += `<p><b>Bot:</b> ${data.message}</p>`;
+      } catch (error) {
+        console.error("Chat error:", error);
+        messages.innerHTML += `<p><b>Bot:</b> Error: ${error.message}</p>`;
+      }
+
+      messages.scrollTop = messages.scrollHeight;
+      input.value = '';
+    }
+
+    async function loadRepo() {
+      const link = document.getElementById('github-link').value.trim();
+      if (!link) return;
+      repoData = await fetchRepoData(link);
+      if (!repoData) return;
+      currentPath = ['root'];
+      await updatePathOnServer();
+      mode = 'tree';
+      renderTree();
+      document.getElementById('back-btn').disabled = true;
+    }
+
+    function renderTree() {
+      if (!repoData) return;
+      const tree = document.getElementById('file-tree');
+      const code = document.getElementById('code-view');
+      tree.innerHTML = '';
+      code.innerHTML = '';
+
+      if (mode === 'tree') {
+        const sunburstData = prepareSunburstData(repoData, currentPath);
+        renderSunburst(sunburstData);
+      } else {
+        const currentLevel = findCurrentLevel(repoData, currentPath);
+        if (currentLevel.content && currentLevel.content.length > 0) {
+          currentLevel.content.forEach((line, index) => {
+            code.innerHTML += `<div class="line" onclick="alert('Clicked line ${index + 1}')">${line}</div>`;
+          });
+        } else {
+          code.innerHTML = `<div id="error-message">No content available for this file</div>`;
+        }
+      }
+    }
+
+    async function explore(name) {
+      currentPath.push(name);
+      await updatePathOnServer();
+      const currentLevel = findCurrentLevel(repoData, currentPath);
+      if (currentLevel && currentLevel.type === "file") {
+        mode = 'code';
+      }
+      renderTree();
+      document.getElementById('back-btn').disabled = currentPath.length <= 1;
+    }
+
+    async function goBack() {
+      if (currentPath.length > 1) {
+        currentPath.pop();
+        await updatePathOnServer();
+        mode = currentPath.length === 1 ? 'tree' : 'code';
+        renderTree();
+        document.getElementById('back-btn').disabled = currentPath.length <= 1;
+      }
+    }
+
+    function donate() {
+      window.open('https://pay.zaprite.com/pl_JKyBAkPmvG', '_blank', 'noopener,noreferrer');
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,67 @@
+{
+  "files": [
+    {
+      "name": "src",
+      "type": "directory",
+      "quality": 70,
+      "children": [
+        {
+          "name": "main.cpp",
+          "type": "file",
+          "quality": 65,
+          "content": [
+            "#include <iostream>",
+            "int main() {",
+            "  std::cout << \"Bitcoin Core\";",
+            "  return 0;",
+            "}"
+          ]
+        },
+        {
+          "name": "wallet",
+          "type": "directory",
+          "quality": 80,
+          "children": [
+            {
+              "name": "wallet.cpp",
+              "type": "file",
+              "quality": 85,
+              "content": [
+                "#include \"wallet.h\"",
+                "void Wallet::Send() {",
+                "  // Send transaction",
+                "}"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "doc",
+      "type": "directory",
+      "quality": 90,
+      "children": [
+        {
+          "name": "README.md",
+          "type": "file",
+          "quality": 95,
+          "content": [
+            "# Bitcoin Documentation",
+            "This directory contains documentation for Bitcoin Core."
+          ]
+        }
+      ]
+    },
+    {
+      "name": "README.md",
+      "type": "file",
+      "quality": 88,
+      "content": [
+        "# Bitcoin Core",
+        "Welcome to the Bitcoin Core repository."
+      ]
+    }
+  ],
+  "path": ["root"]
+}
