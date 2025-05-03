@@ -44,6 +44,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Bitcoin GitHub Explorer Chatbot</title>
   <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked@4.0.12/marked.min.js"></script>
   <style>
     body {
       font-family: 'Courier New', monospace;
@@ -93,7 +94,7 @@
       flex: 3;
       background: #2d2d2d;
       padding: 20px;
-      padding-bottom: 40px; /* Added spacing at the bottom */
+      padding-bottom: 40px;
       border-radius: 5px;
       box-shadow: 0 0 15px rgba(247, 147, 26, 0.2);
       display: flex;
@@ -104,7 +105,7 @@
       flex: 1;
       background: #2d2d2d;
       padding: 20px;
-      padding-bottom: 40px; /* Added spacing at the bottom */
+      padding-bottom: 40px;
       border-radius: 5px;
       box-shadow: 0 0 15px rgba(247, 147, 26, 0.2);
       display: flex;
@@ -120,6 +121,29 @@
       margin-bottom: 10px;
       background: #1f1f1f;
       color: #f7931a;
+    }
+    #chat-messages p {
+      margin: 5px 0;
+    }
+    #chat-messages .user-message {
+      color: #f7931a;
+    }
+    #chat-messages .bot-message {
+      color: #f7931a;
+      line-height: 1.5;
+    }
+    #chat-messages .bot-message ul, #chat-messages .bot-message ol {
+      margin: 10px 0;
+      padding-left: 20px;
+    }
+    #chat-messages .bot-message li {
+      margin-bottom: 5px;
+    }
+    #chat-messages .bot-message strong {
+      font-weight: bold;
+    }
+    #chat-messages .bot-message em {
+      font-style: italic;
     }
     #chat-input-section {
       display: flex;
@@ -413,7 +437,7 @@
       const message = input.value.trim();
       if (!message) return;
 
-      messages.innerHTML += `<p><b>You:</b> ${message}</p>`;
+      messages.innerHTML += `<p class="user-message"><b>You:</b> ${message}</p>`;
       messages.scrollTop = messages.scrollHeight;
 
       try {
@@ -430,10 +454,13 @@
         clearTimeout(timeoutId);
         if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
         const data = await response.json();
-        messages.innerHTML += `<p><b>Bot:</b> ${data.message}</p>`;
+        const botMessage = data.message;
+        // Parse the bot's response as Markdown and render it as HTML
+        const renderedMessage = marked.parse(botMessage);
+        messages.innerHTML += `<div class="bot-message"><b>Bot:</b> ${renderedMessage}</div>`;
       } catch (error) {
         console.error("Chat error:", error);
-        messages.innerHTML += `<p><b>Bot:</b> Error: ${error.message}</p>`;
+        messages.innerHTML += `<p class="bot-message"><b>Bot:</b> Error: ${error.message}</p>`;
       }
 
       messages.scrollTop = messages.scrollHeight;
